@@ -1,105 +1,73 @@
 #pragma once
 #include "Parser.h"
-
+struct s_XY {
+	float x;
+	float y;
+};
 class Geogen {
 public:
-	Geogen():m_lineTag(1), m_doInnerLines(false), m_doLines(false), m_boxDim(4),m_gridsize(0.) { ; }
-	~Geogen() { ; }
+	Geogen();
+	~Geogen();
+	bool Init(
+		float boxDim = 4.f, /*dimension of the box surrounding the airfoil*/
+		float gridSize = 0.01f, /*last variable in the 4 float definition of a point for Gmsh*/
+		int Nspoke = 201, /*number of radial spokes in grid surrounding airfoil*/
+		float Rspoke = 1.00f,
+		int Nstairs = 41,/*number of "stairs" grid lines crossing spokes*/
+		float Rstairs = 1.00f
+	);
+	void Release();
+	bool setSpokePoints(int pts[], s_XY wallPts[]);
 	bool Run(s_pt* pt, int npts, std::string& ofname);
 private:
-	int m_lineTag;
-	bool m_doInnerLines;
-	bool m_doLines;
 	float m_boxDim;
 	float m_gridsize;
-	bool writeHeader(std::ofstream& outf);
+	int   m_Nspoke;
+	float m_Rspoke;
+	int   m_Nstairs;
+	float m_Rstairs;
+
+	int* m_spokePts;
+	s_XY* m_spokeWallPts;
+	int m_NspokePts;
+	int m_NCurve_loop;
+	int m_NSplines;
+
+	int m_startWallPtN;
+	int m_startSpokeWallPtN;
+	int m_startSplineN;
+	int m_startSpokeLineN;
+	int m_startWallLineN;
+	int m_startWallSpokeLineN;
+	int m_startSurfCurveLoopN;
+
+	int m_Npts;
+
 	bool writePt(std::ofstream& outf, float x, float y, int npt);/*Point(#) = {1.4, 0.4, 0., 1.0}; for 2d 0. & 1.0 repeat at end*/
-	bool writeLine(std::ofstream& outf, int start_index, int next_index);/*Line(#) = {pt#, pt#}; Line(2) = {2, 3};*/
-	bool writePtFooter(std::ofstream& outf,int npts);
+	bool writeLine(std::ofstream& outf, int start_index, int next_index, int line_n);/*Line(#) = {pt#, pt#}; Line(2) = {2, 3};*/
+	bool writeSpline(std::ofstream& outf, int pt1, int pt2); /*Spline(3000) = {'pt1':'pt2'};*/
+	bool writeCurveLoop_wTrans(std::ofstream& outf, int splineN);/*Curve Loop(1) = {3000}; Transfinite Curve {3000} = Nair Using Progression Rair;*/
+	bool writeCurveLoop_withSplineNTrans(std::ofstream& outf, int pt1, int pt2);/*uses writeSpline, makes a spline between points into a transfinite curve
+															Spline(3000) = {38:44}; where 38=pt1, 44=pt2
+															Curve Loop(1) = {3000}; Transfinite Curve {3000} = Nair Using Progression Rair;*/
+	bool writeSpokeLine_wTrans(std::ofstream& outf, int pt1, int pt2, int line_n);
+	bool writeStairLine_wTrans(std::ofstream& outf, int pt1, int pt2, int line_n);
+
+
 	bool writeBox(std::ofstream& outf, int start_npt);
+	bool writeSpokeWallPts(std::ofstream& outf, int start_npt);
+	bool writeAirfoilTrans(std::ofstream& outf);
+	bool writeLines(std::ofstream& outf);
+
+	bool writeCurveLoop4(std::ofstream& outf, int l1, int l2, int l3, int l4, int curve_n);/*Curve Loop(8) = {3007, 1003, -3001, -1001};*/
+	bool writeCurveLoop3(std::ofstream& outf, int l1, int l2, int l3, int curve_n);
+	bool writeSurface(std::ofstream& outf, int curve_n, int surf_n);/*Plane Surface(1) = {8};*/
+	bool makeSurfaces(std::ofstream& outf);
+
+	bool setTransSurfs(std::ofstream& outf);
+	bool writeRecombSurfs(std::ofstream& outf);
+	
+	bool writeHeader(std::ofstream& outf);
 	bool writeFooter(std::ofstream& outf, int npts);
 };
-bool Geogen::writeHeader(std::ofstream& outf)
-{
-	outf << "boxdim = " << m_boxDim<<";\n";
-	m_gridsize = 0.01;//m_boxDim / 20.f;
-	return true;
-}
-bool Geogen::Run(s_pt* pt, int npts, std::string& ofname)
-{
-	npts--;/*don't write last point*/
-	if (npts - 2 <= 0)
-		return false;
-	std::ofstream outf(ofname, std::ios::out);
-	writeHeader(outf);
-	for (int i = 0; i < npts; i++) {
-		writePt(outf, pt[i].x, pt[i].y, i);
-	}
-	if (m_doLines) {
-		for (int i = 0; i < (npts - 1); i++) {
-			writeLine(outf, i, i + 1);
-		}
-		writeLine(outf, npts - 1, 0);
-		/*write the internal lines*/
-		if (m_doInnerLines) {
-			int halfpt = npts / 2;/*40 out of 81*/
-			for (int i = 1; i < (halfpt); i++) {/*2 to 40*/
-				int ops_i = npts - 1 - i;/*80 to 41*/
-				writeLine(outf, i, ops_i);
-			}
-		}
-	}
-	writePtFooter(outf, npts);
-	writeBox(outf, 100);
-	writeFooter(outf, npts);
-	outf.close();
-	return true;
-}
-bool Geogen::writePt(std::ofstream& outf, float x, float y, int npt)
-{
-	int ptindex = npt + 1;
-	outf << "Point(" << ptindex << ") = {" << x << "," << y << ", 0,"<<m_gridsize<<"};\n";
-	return true;
-}
-bool Geogen::writeLine(std::ofstream& outf, int start_index, int next_index)
-{
-	int start_i = start_index + 1;
-	int next_i = next_index + 1;
-	outf << "Line(" << m_lineTag << ") = {" << start_i << "," << next_i << "};\n";
-	m_lineTag++;
-	return true;
-}
-bool Geogen::writePtFooter(std::ofstream& outf,int npts)
-{
-	outf << "\nSpline(1000) = {1:" << npts << ",1};\n";
-	outf << "\nCurve Loop(1) = {1000};\n\n";
-	return true;
-}
-bool Geogen::writeBox(std::ofstream& outf, int start_npt)
-{
-	int curPt = start_npt;
-	float gridsize = 0.2;
-	outf << "Point(" << curPt << ") = {" << -m_boxDim << "," << m_boxDim << ",0," << gridsize << "};\n";
-	curPt++;
-	outf << "Point(" << curPt << ") = {" << m_boxDim << "," << m_boxDim << ",0," << gridsize << "};\n";
-	curPt++;
-	outf << "Point(" << curPt << ") = {" << m_boxDim << "," << -m_boxDim << ",0," << gridsize << "};\n";
-	curPt++;
-	outf << "Point(" << curPt << ") = {" << -m_boxDim << "," << -m_boxDim << ",0," << gridsize << "};\n";
 
-	for (int i = start_npt; i < curPt; i++) {
-		outf << "Line(" << m_lineTag << ") = {" << i << "," << i + 1 << "};\n";
-		m_lineTag++;
-	}
-	outf << "Line(" << m_lineTag << ") = {" << curPt << "," << start_npt << "};\n";
-	m_lineTag++;
-	outf << "Curve Loop(2) = {1, 2, 3, 4};\n";
-	return true;
-}
-bool Geogen::writeFooter(std::ofstream& outf, int npts)
-{
-	outf << "\nPlane Surface(1) = {2, 1};\n";
-	outf << "Extrude{0, 0, 1} {\n";
-	outf << "  Surface{1};\n  Layers{1};\n  Recombine;\n}\n";
-	return true;
-}
