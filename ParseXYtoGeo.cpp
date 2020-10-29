@@ -4,7 +4,7 @@ int main()
 {
 	Parser parseAirfoil;
 	std::string in_file_name("IOFiles/airfoilXY.txt");
-	std::string ofname("IOFiles/airfoil_NACA_test0.geo"); //"airfoil_pts.obj"
+	std::string ofname("IOFiles/airfoil_NACA_rot00.geo"); //"airfoil_pts.obj"
 	int pts[6];
 	pts[0] = 14;
 	pts[1] = 26;
@@ -26,11 +26,14 @@ int main()
 	wallPts[5].x = 4;
 	wallPts[5].y = -4;
 	if (parseAirfoil.Run(in_file_name)) {
+		Rot rotAirfoil;
+		rotAirfoil.setAngleDeg(0.0f);
+		rotAirfoil.Run(parseAirfoil.npts, parseAirfoil.pt);
 		Geogen writeAirfoil;
 		//ObjGen writeAirfoil;
 		writeAirfoil.Init();
 		writeAirfoil.setSpokePoints(pts, wallPts);
-		writeAirfoil.Run(parseAirfoil.pt, parseAirfoil.npts, ofname);
+		writeAirfoil.Run(rotAirfoil.m_pts, rotAirfoil.m_npts, ofname);
 		writeAirfoil.Release();
 	}
 	return 0;
