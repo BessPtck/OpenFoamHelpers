@@ -1,9 +1,6 @@
 #pragma once
 #include "Parser.h"
-struct s_XY {
-	float x;
-	float y;
-};
+
 class Geogen {
 public:
 	Geogen();
@@ -17,7 +14,7 @@ public:
 		float Rstairs = 1.00f
 	);
 	void Release();
-	bool setSpokePoints(int pts[], s_XY wallPts[]);
+	bool setSpokePoints(int pts[], s_pt wallPts[]);
 	bool Run(s_pt* pt, int npts, std::string& ofname);
 private:
 	float m_boxDim;
@@ -28,8 +25,7 @@ private:
 	float m_Rstairs;
 
 	int* m_spokePts;
-	s_XY* m_spokeWallPts;
-	int m_NspokePts;
+	s_pt* m_spokeWallPts;
 	int m_NCurve_loop;
 	int m_NSplines;
 
@@ -39,6 +35,7 @@ private:
 	int m_startSpokeLineN;
 	int m_startWallLineN;
 	int m_startWallSpokeLineN;
+	int m_startWallConnLineN;
 	int m_startSurfCurveLoopN;
 
 	int m_Npts;
@@ -55,7 +52,7 @@ private:
 
 
 	bool writeBox(std::ofstream& outf, int start_npt);
-	bool writeSpokeWallPts(std::ofstream& outf, int start_npt);
+	bool writeSpokeWallPts(std::ofstream& outf);
 	bool writeAirfoilTrans(std::ofstream& outf);
 	bool writeLines(std::ofstream& outf);
 

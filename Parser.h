@@ -5,6 +5,7 @@
 
 #define MAXNUMPTS 300
 #define NUMBERLEN 8
+#define NWALLPTS 7
 struct s_pt {
 	float x;
 	float y;

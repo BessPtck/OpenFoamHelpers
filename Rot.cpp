@@ -19,11 +19,14 @@ void Rot::setAngleDeg(float ang) {
 	float angRad = PI * ang / 180.f;
 	setAngleRad(angRad);
 }
-bool Rot::Run(int innpts, s_pt inpt[]) {
+bool Rot::Run(int innpts, s_pt inpt[], s_pt wallPts[]) {
 	setMatrix();
 	m_npts = innpts;
 	for (int i = 0; i < m_npts; i++) {
 		m_pts[i] = rotPt(inpt[i]);
+	}
+	for (int i = 0; i < NWALLPTS; i++) {
+		m_wallPts[i] = setWallPt(wallPts[i]);
 	}
 	return true;
 }
@@ -58,4 +61,11 @@ s_pt Rot::rotPt(s_pt& pt) {
 	s_pt relPt = subPts(pt, m_center);
 	s_pt rotPt = rotVecToPt(relPt);
 	return addPts(rotPt, m_center);
+}
+s_pt Rot::setWallPt(s_pt& pt) {
+	/*find wall pt location at reduced radius*/
+	float radLen = sqrtf(pt.x * pt.x + pt.y * pt.y);
+	float scaleFact = spokeLen / radLen;
+	s_pt newPt = { pt.x * scaleFact, pt.y * scaleFact };
+	return rotPt(newPt);
 }
